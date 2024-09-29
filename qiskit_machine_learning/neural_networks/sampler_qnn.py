@@ -326,6 +326,8 @@ class SamplerQNN(NeuralNetwork):
         else:
             prob = np.zeros((num_samples, *self._output_shape))
 
+        num_samples = len(result)
+
         for i in range(num_samples):
             data_pub = result[i].data
             counts = data_pub.meas.get_counts()
@@ -333,12 +335,12 @@ class SamplerQNN(NeuralNetwork):
             # evaluate probabilities
             for b, v in counts.items():
                 key = int(b, 2)
-                key = self._interpret(b)
+                key = self._interpret(key)
                 if isinstance(key, Integral):
                     key = (cast(int, key),)
                 key = (i, *key)  # type: ignore
                 # Normalize the counts to probabilities
-                prob[key] += v / data_pub.meas.get_bitstrings()
+                prob[key] += v / sum(counts.values())
 
         if self._sparse:
             return prob.to_coo()
@@ -426,6 +428,7 @@ class SamplerQNN(NeuralNetwork):
 
         # sampler allows batching
         job = self.sampler.run([[self._circuit, parameter_values]])
+
         try:
             results = job.result()
         except Exception as exc:
